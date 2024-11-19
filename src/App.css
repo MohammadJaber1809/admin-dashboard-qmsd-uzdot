@@ -36,3 +36,40 @@
     transform: rotate(360deg);
   }
 }
+
+/* Layout for fixed sidebar and main content */
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+.container {
+  display: flex;
+  margin-left: 250px; /* This ensures the content area starts after the sidebar */
+  width: 100%;
+  transition: margin-left 0.3s ease; /* Smooth transition when sidebar opens/closes */
+}
+
+.sidebar {
+  width: 250px;
+  position: fixed;
+  height: 100vh; /* Ensure it spans the entire height */
+  background-color: #4CAF50;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  top: 0;
+  left: 0;
+  z-index: 1000; /* Make sure it's above content */
+}
+
+.main-content {
+  margin-left: 250px; /* Push the content to the right of the sidebar */
+  padding: 20px;
+  flex-grow: 1;
+  width: calc(100% - 250px); /* Ensure the content takes full remaining space */
+}
