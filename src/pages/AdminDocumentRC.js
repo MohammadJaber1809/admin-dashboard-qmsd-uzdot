@@ -280,6 +280,18 @@ const AdminDocumentRC = () => {
             </FormSelect>
           </FormGroup>
 
+          {/* File Upload Input */}
+          <FormGroup>
+            <label htmlFor="attachments">Attachments</label>
+            <FormInput
+              type="file"
+              id="attachments"
+              multiple
+              onChange={handleFileChange} // Attach the file change handler
+            />
+          </FormGroup>
+
+
           {/* Subject Input */}
           <FormGroup>
             <label htmlFor="subject">Subject</label>

@@ -65,6 +65,23 @@ const AdminDocumentRCL = () => {
       }
     };
 
+    const fetchUserRole = async () => {
+      if (currentUserUid) {
+        try {
+          const userDocRef = doc(db, 'users', currentUserUid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            if (userData.role === 'SuperAdmin') {
+              setIsSuperAdmin(true); // Set to true if the user is a SuperAdmin
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+        }
+      }
+    };
+
     fetchDocuments();
     fetchSignatories();
     fetchUserRole();
@@ -79,35 +96,24 @@ const AdminDocumentRCL = () => {
     }
   };
 
-  const fetchUserRole = async () => {
-    if (currentUserUid) {
-      try {
-        const userDocRef = doc(db, 'users', currentUserUid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          if (userData.role === 'SuperAdmin') {
-            setIsSuperAdmin(true); // Set to true if the user is a SuperAdmin
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user role:", error);
-      }
+  const handleDateChange = (docId, newDate) => {
+    if (newDate instanceof Date && !isNaN(newDate)) {
+      setMaturityDates((prevDates) => ({
+        ...prevDates,
+        [docId]: newDate,  // Ensure newDate is valid before updating
+      }));
+    } else {
+      console.error("Invalid date selected:", newDate);
     }
   };
-
-  const handleDateChange = (docId, newDate) => {
-    setMaturityDates((prevDates) => ({
-      ...prevDates,
-      [docId]: newDate,  // Set date for the specific document
-    }));
-  };  
+  
+  
   
   const handleMaturityDateChange = async (docId) => {
     if (selectedDocument) {
       try {
         const updatedDocuments = documents.map(doc => {
-          if (doc.id === docId) {
+          if (doc.id === docId) {  // Make sure docId is being passed here
             return {
               ...doc,
               maturityDates: maturityDates[docId] ? maturityDates[docId].toISOString() : doc.maturityDates,
@@ -118,8 +124,10 @@ const AdminDocumentRCL = () => {
   
         setDocuments(updatedDocuments);
   
-        const docRef = doc(db, 'documents', docId);
-        await updateDoc(docRef, { maturityDates: maturityDates[docId] ? maturityDates[docId].toISOString() : selectedDocument.maturityDates });
+        const docRef = doc(db, 'documents', docId); // Ensure docId is passed here
+        await updateDoc(docRef, { 
+          maturityDates: maturityDates[docId] ? maturityDates[docId].toISOString() : selectedDocument.maturityDates 
+        });
   
         setSnackbarSeverity('success');
         setSnackbarMessage('Maturity date updated successfully!');
@@ -134,8 +142,7 @@ const AdminDocumentRCL = () => {
   };
   
   
-
-
+  
   const handleDocumentPreview = async (doc) => {
     if (doc.googleDocsUrl) {
       setFileLoading(true);
@@ -186,18 +193,18 @@ const AdminDocumentRCL = () => {
         setSnackbarOpen(true);
         return;
       }
-
+  
       if (!selectedDocument.signatories.includes(selectedSignatory)) {
         setSnackbarSeverity('error');
         setSnackbarMessage('Selected signatory is not a valid signatory for this document.');
         setSnackbarOpen(true);
         return;
       }
-
+  
       // Find the current signatory index and the next signatory index
       const currentSignatoryIndex = selectedDocument.signatories.indexOf(selectedDocument.currentSignatory);
       const selectedSignatoryIndex = selectedDocument.signatories.indexOf(selectedSignatory);
-
+  
       // Only the current signatory can approve or make changes
       if (selectedStatus === 'Approved') {
         // Ensure the selected signatory is the next signatory in the sequence
@@ -208,7 +215,7 @@ const AdminDocumentRCL = () => {
           return;
         }
       }
-
+  
       // For "For Revision" or "Disapproved" statuses, ensure it's a previous signatory
       if (selectedStatus === 'For Revision' || selectedStatus === 'Disapproved') {
         if (selectedSignatoryIndex > currentSignatoryIndex) {
@@ -218,7 +225,7 @@ const AdminDocumentRCL = () => {
           return;
         }
       }
-
+  
       try {
         const updatedDocuments = documents.map(doc => {
           if (doc.id === selectedDocument.id) {
@@ -227,21 +234,23 @@ const AdminDocumentRCL = () => {
               approval: selectedStatus,
               currentSignatory: selectedSignatory,
               googleDocsUrl: googleDocsLink || doc.googleDocsUrl,  // Update Google Docs URL if provided
-              maturityDates: maturityDates ? maturityDates.toISOString() : selectedDocument.maturityDates, // Add the maturity date
+              // Removed maturityDates handling from here
             };
           }
           return doc;
         });
-
+  
         setDocuments(updatedDocuments);
-
+  
         const docRef = doc(db, 'documents', selectedDocument.id);
-        await updateDoc(docRef, { 
+        const updateData = {
           approval: selectedStatus,
           currentSignatory: selectedSignatory,
           googleDocsUrl: googleDocsLink || selectedDocument.googleDocsUrl, // Update Google Docs URL if provided
-        });
-
+        };
+  
+        await updateDoc(docRef, updateData);
+  
         setSnackbarSeverity('success');
         setSnackbarMessage('Document status updated successfully!');
         setSnackbarOpen(true);
@@ -249,7 +258,7 @@ const AdminDocumentRCL = () => {
       } catch (error) {
         console.error("Error updating document approval:", error);
         setSnackbarSeverity('error');
-        setSnackbarMessage('Unable to update document approval. Please try again later.');
+        setSnackbarMessage(`Unable to update document approval. Error: ${error.message}`);
         setSnackbarOpen(true);
       }
     } else {
@@ -258,6 +267,10 @@ const AdminDocumentRCL = () => {
       setSnackbarOpen(true);
     }
   };
+  
+  
+  
+  
 
   return (
     <Box>
@@ -308,30 +321,6 @@ const AdminDocumentRCL = () => {
                     >
                       {userCanEdit ? 'Update Status' : 'View Document'}
                     </Button>
-
-                                      {/* Conditionally render DatePicker for SuperAdmin */}
-                  {isSuperAdmin && (
-                    <Box sx={{ marginTop: 2 }}>
-<LocalizationProvider dateAdapter={AdapterDateFns}>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
-    <DatePicker
-      label="Select Maturity Date"
-      value={maturityDates}
-      onChange={(date) => setMaturityDates(date)}
-      renderInput={(params) => <TextField {...params} />}
-    />
-    <Button
-      variant="contained"
-      onClick={handleMaturityDateChange} // Trigger maturity date update
-      disabled={!maturityDates} // Disable button if no date is selected
-    >
-      Set Date
-    </Button>
-  </Box>
-</LocalizationProvider>
-
-                      </Box>
-                  )}
                 </CardContent>
               </Card>
             );
@@ -372,24 +361,6 @@ const AdminDocumentRCL = () => {
       ></iframe>
     )}
 
-    <Box sx={{ marginTop: 3 }}>
-    <FormControl fullWidth>
-          <InputLabel id="document-select-label">Select Document</InputLabel>
-          <Select
-            labelId="document-select-label"
-            id="document-select"
-            value={selectedDocument ? selectedDocument.id : ''}
-            onChange={(e) => handleDocumentSelection(e.target.value)}
-          >
-            {documents.map((doc) => (
-              <MenuItem key={doc.id} value={doc.id}>
-                {doc.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-
       <TextField
         label="Google Docs Link"
         variant="outlined"
@@ -414,6 +385,26 @@ const AdminDocumentRCL = () => {
         </Select>
       </FormControl>
       
+      <FormControl fullWidth sx={{ marginBottom: 2 }}>
+  <InputLabel id="signatory-select-label">Select Signatory</InputLabel>
+  <Select
+    labelId="signatory-select-label"
+    id="signatory-select"
+    value={selectedSignatory}
+    onChange={(e) => setSelectedSignatory(e.target.value)}
+  >
+    {selectedDocument &&
+      selectedDocument.signatories.map((signatoryId) => {
+        const signatory = signatories.find((s) => s.id === signatoryId);
+        return (
+          <MenuItem key={signatoryId} value={signatoryId}>
+            {signatory ? `${signatory.fullName} - ${signatory.department}` : 'Unknown Signatory'}
+          </MenuItem>
+        );
+      })}
+  </Select>
+</FormControl>
+
 
       <Button
         variant="contained"
@@ -423,42 +414,22 @@ const AdminDocumentRCL = () => {
         Update Status
       </Button>
 
-              {/* Select Document before interacting with Maturity Date */}
-              <Box sx={{ marginTop: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel id="document-select-label">Select Document</InputLabel>
-            <Select
-              labelId="document-select-label"
-              id="document-select"
-              value={selectedDocument ? selectedDocument.id : ''}
-              onChange={(e) => handleDocumentSelection(e.target.value)}
-            >
-              {documents.map((doc) => (
-                <MenuItem key={doc.id} value={doc.id}>
-                  {doc.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-
-      {/* DatePicker for the selected document */}
-      {selectedDocument && (
+      {/* DatePicker for the selected document, visible only to SuperAdmin */}
+      {selectedDocument && isSuperAdmin && ( // Add isSuperAdmin check
         <Box sx={{ marginTop: 2 }}>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DatePicker
-            label="Maturity Date"
-            value={maturityDates[selectedDocument?.id] || null}
-            onChange={(newDate) => handleDateChange(selectedDocument.id, newDate)}
-            renderInput={(params) => <TextField {...params} />}
-          />
-        </LocalizationProvider>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="Maturity Date"
+              value={maturityDates[selectedDocument?.id] || null}
+              onChange={(newDate) => handleDateChange(selectedDocument.id, newDate)}
+              renderInput={(params) => <TextField {...params} />}
+            />
+          </LocalizationProvider>
 
-
-    <Button
+          <Button
             variant="contained"
             onClick={() => handleMaturityDateChange(selectedDocument.id)}
-            disabled={!maturityDates[selectedDocument.id]}
+            disabled={!maturityDates[selectedDocument.id] || isNaN(maturityDates[selectedDocument.id].getTime())}
             sx={{ marginTop: 2 }}
           >
             Set Maturity Date
@@ -466,7 +437,7 @@ const AdminDocumentRCL = () => {
         </Box>
       )}
 
-    </Box>
+
   </div>
 </Modal>
 
