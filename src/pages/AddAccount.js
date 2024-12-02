@@ -91,6 +91,10 @@ const AddAccount = () => {
   const handleCreateAccount = async (e) => {
     e.preventDefault();
 
+    // Reset error messages before proceeding with validation
+    setErrorMessage('');
+    setSuccessMessage('');
+
     // Check if password contains spaces
     if (/\s/.test(password)) {
       setErrorMessage('Password cannot contain spaces');
@@ -141,7 +145,7 @@ const AddAccount = () => {
       setSuccessMessage('Account created successfully!');
       setSnackbarOpen(true); // Open the Snackbar
 
-      // Optionally reset form fields after success
+      // Reset form fields after successful creation
       setEmail('');
       setFullName('');
       setEmployeeId('');
@@ -149,11 +153,16 @@ const AddAccount = () => {
       setConfirmPassword('');
       setDepartment('');
       setRole('');
+      setDepartments(['HR', 'Finance', 'Engineering', 'Marketing']); // Optional: reset the departments list
+      setNewDepartment('');
+      setIsAddingNewDepartment(false); // Close the "Add New Department" section
+
     } catch (error) {
       console.error('Error creating account: ', error.message);
       setErrorMessage(`Failed to create account: ${error.message}`);
     }
   };
+
 
   // Handle adding a new department
   const handleAddDepartment = () => {
