@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/admin-dashboard-qmsd-uzdot/static/css/main.e6c13ad2.css",
+    "main.js": "/admin-dashboard-qmsd-uzdot/static/js/main.ac349a7c.js",
+    "static/js/453.33745cd1.chunk.js": "/admin-dashboard-qmsd-uzdot/static/js/453.33745cd1.chunk.js",
+    "static/media/logo.png": "/admin-dashboard-qmsd-uzdot/static/media/logo.d3cfa19e9fe29679c0c4.png",
+    "static/media/bg3.jpg": "/admin-dashboard-qmsd-uzdot/static/media/bg3.3d07940013fcb70df810.jpg",
+    "index.html": "/admin-dashboard-qmsd-uzdot/index.html",
+    "main.e6c13ad2.css.map": "/admin-dashboard-qmsd-uzdot/static/css/main.e6c13ad2.css.map",
+    "main.ac349a7c.js.map": "/admin-dashboard-qmsd-uzdot/static/js/main.ac349a7c.js.map",
+    "453.33745cd1.chunk.js.map": "/admin-dashboard-qmsd-uzdot/static/js/453.33745cd1.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.ac349a7c.js"
+  ]
+}
