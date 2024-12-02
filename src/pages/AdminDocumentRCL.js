@@ -4,6 +4,8 @@ import { collection, getDoc, getDocs, updateDoc, doc } from 'firebase/firestore'
 import { db } from '../config/firebaseConfig';
 import Stepper from '@mui/material/Stepper';
 import Step from '@mui/material/Step';
+import { Tooltip, IconButton } from '@mui/material';
+import InfoIcon from '@mui/icons-material/Info';
 import StepLabel from '@mui/material/StepLabel';
 import ColorlibConnector from '../components/StepIcons/ColorlibConnector';
 import ColorlibStepIcon from '../components/StepIcons/ColorlibStepIcon';
@@ -72,7 +74,7 @@ const AdminDocumentRCL = () => {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-            if (userData.role === 'SuperAdmin') {
+            if (userData.role === 'SuperAdmin' || userData.role === 'Admin') {
               setIsSuperAdmin(true); // Set to true if the user is a SuperAdmin
             }
           }
@@ -98,16 +100,29 @@ const AdminDocumentRCL = () => {
 
   const handleDateChange = (docId, newDate) => {
     if (newDate instanceof Date && !isNaN(newDate)) {
+      const currentDate = new Date();
+      if (newDate <= currentDate) {
+        setSnackbarSeverity('error');
+        setSnackbarMessage('Maturity date must be in the future.');
+        setSnackbarOpen(true);
+  
+        // Clear invalid date in the state
+        setMaturityDates((prevDates) => ({
+          ...prevDates,
+          [docId]: null,
+        }));
+        return; 
+      }
+  
+      // If valid, update the maturityDates state
       setMaturityDates((prevDates) => ({
         ...prevDates,
-        [docId]: newDate,  // Ensure newDate is valid before updating
+        [docId]: newDate,
       }));
     } else {
       console.error("Invalid date selected:", newDate);
     }
   };
-  
-  
   
   const handleMaturityDateChange = async (docId) => {
     if (selectedDocument) {
@@ -200,6 +215,15 @@ const AdminDocumentRCL = () => {
         setSnackbarOpen(true);
         return;
       }
+
+          // Check if Google Docs URL is valid (basic validation)
+    const googleDocsUrlRegex = /^https:\/\/docs\.google\.com\/.*$/;
+    if (googleDocsLink && !googleDocsUrlRegex.test(googleDocsLink)) {
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Invalid Google Docs link. Please enter a valid URL.');
+      setSnackbarOpen(true);
+      return;
+    }
   
       // Find the current signatory index and the next signatory index
       const currentSignatoryIndex = selectedDocument.signatories.indexOf(selectedDocument.currentSignatory);
@@ -268,9 +292,6 @@ const AdminDocumentRCL = () => {
     }
   };
   
-  
-  
-  
 
   return (
     <Box>
@@ -278,55 +299,58 @@ const AdminDocumentRCL = () => {
         Document Request Control
       </Typography>
       <div className="admindocumentrcl-document-list">
-        {documents.length === 0 ? (
-          <p>No documents available.</p>
-        ) : (
-          documents.map(doc => {
-            const userIsSignatory = doc.signatories.includes(currentUserUid);
+  {documents.length === 0 ? (
+    <p>No documents available.</p>
+  ) : (
+    documents.map((doc) => {
+      // Check if the user is a signatory or a SuperAdmin
+      const userIsSignatory = doc.signatories.includes(currentUserUid);
+      const userCanView = userIsSignatory || isSuperAdmin;
 
-            if (!userIsSignatory) return null;
+      if (!userCanView) return null; // Skip rendering if the user is neither a signatory nor a SuperAdmin
 
-            const userCanEdit = (doc.status === 0 || doc.status === 1);
-            const currentStepIndex = doc.signatories.indexOf(doc.currentSignatory);
+      const userCanEdit = (doc.status === 0 || doc.status === 1);
+      const currentStepIndex = doc.signatories.indexOf(doc.currentSignatory);
 
-            return (
-              <Card key={doc.id} variant="outlined" sx={{ marginBottom: 2 }}>
-                <CardContent>
-                  <Typography variant="h6">{doc.subject}</Typography>
-                  <Typography>Description: {doc.description}</Typography>
-                  <Typography>Type: {doc.type}</Typography>
+      return (
+        <Card key={doc.id} variant="outlined" sx={{ marginBottom: 2 }}>
+          <CardContent>
+            <Typography variant="h6">{doc.subject}</Typography>
+            <Typography>Description: {doc.description}</Typography>
+            <Typography>Type: {doc.type}</Typography>
 
-                  <Stepper activeStep={currentStepIndex} alternativeLabel connector={<ColorlibConnector />}>
-                    {doc.signatories.map((signatoryId, index) => {
-                      const signatory = signatories.find(s => s.id === signatoryId);
-                      return (
-                        <Step key={index}>
-                          <StepLabel StepIconComponent={ColorlibStepIcon}>
-                            {signatory ? `${signatory.fullName} - ${signatory.department}` : 'Unknown Signatory'}
-                          </StepLabel>
-                        </Step>
-                      );
-                    })}
-                  </Stepper>
-                  <Button 
-                      variant="contained" 
-                      sx={{ 
-                        marginTop: 2, 
-                        width: '100%', 
-                        backgroundColor: userCanEdit ? '#4CAF50' : '#2196F3', 
-                        '&:hover': { backgroundColor: userCanEdit ? '#45a049' : '#1976D2' } 
-                      }}
-                      onClick={() => handleDocumentPreview(doc)} 
-                      disabled={false} // Always allow view action
-                    >
-                      {userCanEdit ? 'Update Status' : 'View Document'}
-                    </Button>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
+            <Stepper activeStep={currentStepIndex} alternativeLabel connector={<ColorlibConnector />}>
+              {doc.signatories.map((signatoryId, index) => {
+                const signatory = signatories.find((s) => s.id === signatoryId);
+                return (
+                  <Step key={index}>
+                    <StepLabel StepIconComponent={ColorlibStepIcon}>
+                      {signatory ? `${signatory.fullName} - ${signatory.department}` : 'Unknown Signatory'}
+                    </StepLabel>
+                  </Step>
+                );
+              })}
+            </Stepper>
+            <Button
+              variant="contained"
+              sx={{
+                marginTop: 2,
+                width: '100%',
+                backgroundColor: userCanEdit ? '#4CAF50' : '#2196F3',
+                '&:hover': { backgroundColor: userCanEdit ? '#45a049' : '#1976D2' },
+              }}
+              onClick={() => handleDocumentPreview(doc)}
+              disabled={false} // Always allow view action
+            >
+              {userCanEdit ? 'Update Status' : 'View Document'}
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    })
+  )}
+</div>
+
 
       <Modal 
   open={modalOpen} 
@@ -361,6 +385,7 @@ const AdminDocumentRCL = () => {
       ></iframe>
     )}
 
+    <Box position="relative" width="100%">
       <TextField
         label="Google Docs Link"
         variant="outlined"
@@ -370,6 +395,20 @@ const AdminDocumentRCL = () => {
         disabled={selectedDocument && selectedDocument.currentSignatory !== currentUserUid}
         sx={{ marginBottom: 2 }}
       />
+
+      <Tooltip title={
+          <div>
+            <p>1. Open the document via the pop-out button</p>
+            <p>2. Open with Google Docs on the Google Doc Viewer Tab</p>
+            <p>3. Click the share button on the top right of Google Docs Tab</p>
+            <p>4. Copy the link and paste it here</p>
+          </div>
+        } arrow sx={{ fontSize: '1.2rem', position: 'absolute', right: 10, top: '40%', transform: 'translateY(-50%)' }}>
+        <IconButton>
+          <InfoIcon />
+        </IconButton>
+      </Tooltip>
+    </Box>
 
       <FormControl fullWidth sx={{ marginBottom: 2 }}>
         <InputLabel id="status-select-label">Select Status</InputLabel>
@@ -414,33 +453,58 @@ const AdminDocumentRCL = () => {
         Update Status
       </Button>
 
-      {/* DatePicker for the selected document, visible only to SuperAdmin */}
-      {selectedDocument && isSuperAdmin && ( // Add isSuperAdmin check
-        <Box sx={{ marginTop: 2 }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DatePicker
-              label="Maturity Date"
-              value={maturityDates[selectedDocument?.id] || null}
-              onChange={(newDate) => handleDateChange(selectedDocument.id, newDate)}
-              renderInput={(params) => <TextField {...params} />}
-            />
-          </LocalizationProvider>
+{/* DatePicker for the selected document, visible only to SuperAdmin */}
+{selectedDocument && isSuperAdmin && (
+  <Box sx={{ marginTop: 2 }}>
+<LocalizationProvider dateAdapter={AdapterDateFns}>
+  <DatePicker
+    label="Maturity Date"
+    value={maturityDates[selectedDocument?.id] || null}
+    minDate={new Date(new Date().setFullYear(new Date().getFullYear() - 25))} // 25 years in the past
+    maxDate={new Date(new Date().setFullYear(new Date().getFullYear() + 25))} // 25 years in the future
+    onChange={(newDate) => handleDateChange(selectedDocument.id, newDate)}
+    renderInput={(params) => (
+      <TextField
+        {...params}
+        error={
+          (params.error || // Default error from the picker
+          (maturityDates[selectedDocument?.id] &&
+            (new Date(maturityDates[selectedDocument?.id]).getFullYear() < new Date().getFullYear() - 25 ||
+             new Date(maturityDates[selectedDocument?.id]).getFullYear() > new Date().getFullYear() + 25)))
+        }
+        helperText={
+          (params.helperText || // Default helper text from the picker
+          (maturityDates[selectedDocument?.id] &&
+            (new Date(maturityDates[selectedDocument?.id]).getFullYear() < new Date().getFullYear() - 25
+              ? 'Date cannot be earlier than 25 years ago.'
+              : new Date(maturityDates[selectedDocument?.id]).getFullYear() > new Date().getFullYear() + 25
+              ? 'Date cannot be later than 25 years in the future.'
+              : '')))
+        }
+      />
+    )}
+  />
+</LocalizationProvider>
 
-          <Button
-            variant="contained"
-            onClick={() => handleMaturityDateChange(selectedDocument.id)}
-            disabled={!maturityDates[selectedDocument.id] || isNaN(maturityDates[selectedDocument.id].getTime())}
-            sx={{ marginTop: 2 }}
-          >
-            Set Maturity Date
-          </Button>
-        </Box>
-      )}
 
+    <Button
+      variant="contained"
+      onClick={() => handleMaturityDateChange(selectedDocument.id)}
+      disabled={
+        !maturityDates[selectedDocument.id] || // Check if no date is selected
+        isNaN(new Date(maturityDates[selectedDocument.id]).getTime()) || // Ensure date is valid
+        new Date(maturityDates[selectedDocument.id]).setHours(0, 0, 0, 0) <= // Compare only date (not time)
+          new Date().setHours(0, 0, 0, 0) // Today's date
+      }
+      sx={{ marginTop: 2 }}
+    >
+      Set Maturity Date
+    </Button>
+  </Box>
+)}
 
   </div>
 </Modal>
-
 
       {/* Snackbar for confirmation */}
       <Snackbar 

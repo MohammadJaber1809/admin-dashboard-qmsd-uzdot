@@ -220,16 +220,17 @@ const Documents = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.subject && doc.subject.toLowerCase().includes(filters.searchTerm.toLowerCase());
+    const matchesSearch = filters.searchTerm === '*' || (doc.subject && doc.subject.toLowerCase().includes(filters.searchTerm.toLowerCase()));
     const matchesType = filters.documentType ? doc.type.toLowerCase() === filters.documentType.toLowerCase() : true;
     const matchesDepartment = filters.department ? doc.department.toLowerCase() === filters.department.toLowerCase() : true;
     const matchesApproval = filters.approval ? (doc.approval && doc.approval.toLowerCase() === filters.approval.toLowerCase()) : true;
-    const matchesStatus = filters.status ? doc.status.toLowerCase() === filters.status.toLowerCase() : true;
+    const matchesStatus = filters.status
+      ? doc.status && doc.status.toLowerCase() === filters.status.toLowerCase()
+      : true;
     
-  
     return matchesSearch && matchesType && matchesDepartment && matchesApproval && matchesStatus;
-    return doc && doc.someProperty && doc.someProperty.toLowerCase().includes(searchQuery.toLowerCase());
   });
+  
   
   
   
@@ -262,6 +263,7 @@ const Documents = () => {
     }
   };
   
+
 
   const handleDownloadFile = async (filePaths) => {
     if (!filePaths || filePaths.length === 0) {
@@ -349,44 +351,55 @@ const Documents = () => {
           <NoResultsMessage>{error}</NoResultsMessage>
         ) : filteredDocuments.length > 0 ? (
           filteredDocuments.map(doc => (
-            <Box key={doc.id}>
-              <StyledCard variant="outlined">
-                <CardContent>
-                  <IconWrapper>
-                    {getDocumentIcon(doc.type)}
-                    <Typography variant="h5" component="div" sx={{ marginLeft: 1, fontSize: '16px' }}>
-                      {doc.subject || 'Untitled Document'}
-                    </Typography>
-                  </IconWrapper>
-                  <Typography gutterBottom sx={{ color: 'text.secondary', fontSize: '14px' }}>
-                    Department: {doc.department || 'N/A'}
-                  </Typography>
-                  <Typography sx={{ color: 'text.secondary', mb: 1.5, fontSize: '14px' }}>
-                    Type: {doc.type || 'N/A'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontSize: '12px' }}>
-                    Description: {doc.description || 'No description available.'}
-                    <br />
-                    Amount: {doc.amount || 'N/A'}
-                    <br />
-                    Status: {getStatusIcon(doc.documentStatus)} {doc.documentStatus || 'N/A'}
-                    <br />
-                    Document Status: {doc.status !== undefined ? doc.status : 'N/A'}
-                  </Typography>
-                </CardContent>
-                <ActionIcons>
-                  <IconButton size="small" onClick={() => handleViewFile(doc.filePaths)}>
-                    <FontAwesomeIcon icon={faEye} />
-                  </IconButton>
-                  {doc.type && doc.type.toLowerCase() === 'form' && (
-                    <IconButton size="small" onClick={() => handleDownloadFile(doc.filePaths)}>
-                      <FontAwesomeIcon icon={faDownload} />
-                    </IconButton>
-                  )}
-                </ActionIcons>
+<Box key={doc.id} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+  <StyledCard
+    variant="outlined"
+    onClick={() => handleViewFile(doc.filePaths)} // Open modal on card click
+    sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '40%', // Ensures all containers have equal height
+      cursor: 'pointer', // Hand cursor on hover
+    }}
+  >
+    <CardContent sx={{ flexGrow: 1 }}> {/* Ensures content takes full space */}
+      <IconWrapper>
+        {getDocumentIcon(doc.type)}
+        <Typography variant="h5" component="div" sx={{ marginLeft: 1, fontSize: '16px' }}>
+          {doc.subject || 'Untitled Document'}
+        </Typography>
+      </IconWrapper>
+      <Typography gutterBottom sx={{ color: 'text.secondary', fontSize: '14px' }}>
+        Department: {doc.department || 'N/A'}
+      </Typography>
+      <Typography sx={{ color: 'text.secondary', mb: 1.5, fontSize: '14px' }}>
+        Type: {doc.type || 'N/A'}
+      </Typography>
+      <Typography variant="body2" sx={{ fontSize: '12px' }}>
+        Description: {doc.description || 'No description available.'}
+        <br />
+        Status: {getStatusIcon(doc.documentStatus)} {doc.documentStatus || 'N/A'}
+        <br />
+        Document Status: {doc.status !== undefined ? doc.status : 'N/A'}
+      </Typography>
+    </CardContent>
+    <ActionIcons>
+      {doc.type && doc.type.toLowerCase() === 'form' && (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering modal
+            handleDownloadFile(doc.filePaths);
+          }}
+        >
+          <FontAwesomeIcon icon={faDownload} />
+        </IconButton>
+      )}
+    </ActionIcons>
+  </StyledCard>
+</Box>
 
-              </StyledCard>
-            </Box>
+          
           ))
         ) : (
           <NoResultsMessage>No documents found matching your search.</NoResultsMessage>

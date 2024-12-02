@@ -87,48 +87,77 @@ const styles = {
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false); // Add loading state
-  const [errorMessage, setErrorMessage] = useState(''); // State for error messages
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // State to track authentication
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true); // Set loading to true when starting the login process
-    setErrorMessage(''); // Reset any previous error messages
-
+    setLoading(true);
+    setErrorMessage('');
+    
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // Fetch user role and wait for it to complete
-      const userRole = await fetchUserRole(user.uid);
-
-      // Store authentication status to trigger redirection
+    
+      // Fetch user details
+      const userDetails = await fetchUserDetails(user.uid);
+      console.log('Fetched user details:', userDetails);
+    
+      if (!userDetails) {
+        setErrorMessage('User not found. Please check your credentials.');
+        return;
+      }
+    
+      const { role, status } = userDetails;
+      console.log('User role:', role);
+      console.log('User status:', status);
+    
+      // Handle inactive accounts
+      if (status === 'Inactive') {
+        console.log('Account is inactive. Logging out immediately...');
+        setErrorMessage('Your account is inactive. You have been logged out.');
+        setTimeout(() => auth.signOut(), 2000); // Delay logout to show the message
+        return;
+      }
+    
+      // Set authentication for active accounts
       setIsAuthenticated(true);
-
-      if (userRole === 'Admin' || userRole === 'SuperAdmin') {
-        navigate('/dashboard'); // User redirected to the documents page
+    
+      // Navigate based on user role
+      if (role === 'Admin' || role === 'SuperAdmin') {
+        console.log('Navigating to Admin dashboard');
+        navigate('/dashboard');
       } else {
-
-        navigate('/dashboard/documents'); // Non-admin user redirected to the documents page
+        console.log('Navigating to Documents dashboard');
+        navigate('/dashboard/documents');
       }
     } catch (error) {
       console.error('Login error:', error.message);
-      setErrorMessage('Invalid credentials. Please try again.'); // Show error message to user
+      if (error.code === 'auth/user-not-found') {
+        setErrorMessage('User not found. Please check your credentials.');
+      } else if (error.code === 'auth/wrong-password') {
+        setErrorMessage('Incorrect password. Please try again.');
+      } else {
+        setErrorMessage('An error occurred. Please try again later.');
+      }
     } finally {
-      setLoading(false); // Hide loading spinner after navigation
+      setLoading(false);
     }
   };
-
+  
+  
+  
   useEffect(() => {
+    console.log('isAuthenticated:', isAuthenticated);
     if (isAuthenticated) {
-      // Prevent rendering the login form after redirection
-      // Adding this check ensures the login form is not displayed for a brief moment
-      return;
+      console.log('User authenticated, navigating to dashboard...');
+      navigate('/dashboard');
     }
-  }, [isAuthenticated]);
-
+  }, [isAuthenticated, navigate]);
+  
+  
   return (
     <div style={styles.container}>
       <div style={styles.leftPanel}>
@@ -170,24 +199,36 @@ const Login = () => {
                   LOGIN
                 </button>
                 <a href="/forgot-password" style={styles.forgotLink}>
-                  Forgot Username/Password?
+                  Forgot Password?
                 </a>
               </form>
-              {errorMessage && <Snackbar open={true} message={errorMessage} />}
             </>
           )}
+          {errorMessage && <Snackbar open={Boolean(errorMessage)} message={errorMessage} />}
         </div>
       </div>
     </div>
   );
 };
 
-// Function to fetch user role from Firestore
-const fetchUserRole = async (uid) => {
-  const userRef = doc(db, 'users', uid); // Use db to get the document reference
-  const docSnapshot = await getDoc(userRef); // Fetch the document
+// Function to fetch user details from Firestore
+const fetchUserDetails = async (uid) => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const docSnapshot = await getDoc(userRef);
 
-  return docSnapshot.exists() ? docSnapshot.data().role : null; // Return role or null if not found
+    if (docSnapshot.exists()) {
+      const userData = docSnapshot.data();
+      console.log('Fetched data from Firestore:', userData);
+      return { role: userData.role, status: userData.status }; // Ensure status is correct
+    } else {
+      console.log('No user document found!');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return null;
+  }
 };
 
 export default Login;

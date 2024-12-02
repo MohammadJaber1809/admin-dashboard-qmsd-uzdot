@@ -168,6 +168,14 @@ const AdminDocumentRC = () => {
       setSnackbarErrorOpen(true);
       return;
     }
+
+      // Check if at least one file is uploaded
+    if (attachments.length === 0) {
+      setErrorMessage("Please upload at least one file.");
+      setSnackbarErrorOpen(true);
+      return;
+    }
+
   
     try {
       const userUid = auth.currentUser.uid;

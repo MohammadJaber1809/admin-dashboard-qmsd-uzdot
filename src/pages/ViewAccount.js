@@ -24,6 +24,7 @@ import { auth } from '../config/firebaseConfig'; // Assuming you have Firebase A
 
 const Account = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);  // Store all users to reset when search is cleared
   const [searchQuery, setSearchQuery] = useState('');
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
@@ -36,6 +37,9 @@ const Account = () => {
       const usersSnapshot = await getDocs(usersCollection);
       const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       console.log("Fetched Users:", usersList); // Log the fetched users
+
+      // Store all users for resetting the filtered list
+      setAllUsers(usersList);
 
       // Filter users based on current user's role
       if (currentUserRole === 'Admin') {
@@ -114,14 +118,18 @@ const Account = () => {
     const query = event.target.value.toLowerCase();
     setSearchQuery(query);
 
-    // Filter users based on query matching any field
-    const filtered = filteredUsers.filter(user =>
-      user.fullName.toLowerCase().includes(query) ||
-      user.department.toLowerCase().includes(query) ||
-      user.email?.toLowerCase().includes(query)
-    );
-
-    setFilteredUsers(filtered);
+    if (query === '*' || query === '') {
+      // If search query is '*' or empty, show all users
+      setFilteredUsers(allUsers);
+    } else {
+      // Filter users based on query
+      const filtered = allUsers.filter(user =>
+        user.fullName.toLowerCase().includes(query) ||
+        user.department.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query)
+      );
+      setFilteredUsers(filtered);
+    }
   };
 
   return (

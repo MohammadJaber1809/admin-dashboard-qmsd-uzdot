@@ -61,10 +61,18 @@ const ForgotPassword = () => {
     setMessage('');
 
     try {
+      // Send the password reset email without custom URL
       await sendPasswordResetEmail(auth, email);
-      setMessage('Password reset email sent! Please check your inbox.');
+
+      setMessage(
+        'If this email is registered, a password reset link will be sent to your inbox.'
+      );
     } catch (error) {
-      setError('Error sending password reset email: ' + error.message);
+      if (error.code === 'auth/user-not-found') {
+        setError('Email not found. Please check the email address or register.');
+      } else {
+        setError('Error sending password reset email: ' + error.message);
+      }
     }
   };
 

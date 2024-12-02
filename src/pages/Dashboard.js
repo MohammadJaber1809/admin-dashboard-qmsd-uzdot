@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Paper, TextField } from '@mui/material';
+import { Box, Typography, Grid, Paper, TextField, FormHelperText } from '@mui/material';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import { Chart, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
 import { db } from '../config/firebaseConfig'; // Adjust path to your Firebase config
@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'; // Import useNavigate hook
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { InputAdornment } from '@mui/material';
 
 // Register the required components
 Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
@@ -19,7 +20,24 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [startDateError, setStartDateError] = useState(null); // To manage start date error
+  const [endDateError, setEndDateError] = useState(null); // To manage end date error
   const navigate = useNavigate(); // Hook to programmatically navigate
+
+  // Calculate date limits (25 years from today in both directions)
+  const today = new Date();
+  const minDate = new Date(today.getFullYear() - 25, today.getMonth(), today.getDate());
+  const maxDate = new Date(today.getFullYear() + 25, today.getMonth(), today.getDate());
+
+  const handleDateChange = (newDate, setDate, setError) => {
+    // Validate the date to ensure it's within the valid range
+    if (newDate && (newDate < minDate || newDate > maxDate)) {
+      setError('Date must be within the past 25 years and the next 25 years.');
+    } else {
+      setError(null); // Clear error if the date is valid
+    }
+    setDate(newDate);
+  };
 
   // Event handler for donut chart click
   const handleDonutClick = (event, chartElement) => {
@@ -163,17 +181,51 @@ const Dashboard = () => {
             <DatePicker
               label="Start Date"
               value={startDate}
-              onChange={(newDate) => setStartDate(newDate)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              onChange={(newDate) => handleDateChange(newDate, setStartDate, setStartDateError)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  error={Boolean(startDateError)}
+                  helperText={startDateError}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      borderColor: startDateError ? 'red' : 'initial',
+                    },
+                  }}
+                />
+              )}
+              minDate={minDate}
+              maxDate={maxDate}
             />
+            {startDateError && (
+              <FormHelperText error>{startDateError}</FormHelperText>
+            )}
           </Grid>
           <Grid item xs={12} sm={6}>
             <DatePicker
               label="End Date"
               value={endDate}
-              onChange={(newDate) => setEndDate(newDate)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              onChange={(newDate) => handleDateChange(newDate, setEndDate, setEndDateError)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  error={Boolean(endDateError)}
+                  helperText={endDateError}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      borderColor: endDateError ? 'red' : 'initial',
+                    },
+                  }}
+                />
+              )}
+              minDate={minDate}
+              maxDate={maxDate}
             />
+            {endDateError && (
+              <FormHelperText error>{endDateError}</FormHelperText>
+            )}
           </Grid>
         </Grid>
 
@@ -184,27 +236,27 @@ const Dashboard = () => {
               <Typography variant="h6" gutterBottom>
                 Document Types
               </Typography>
-              <Doughnut data={donutData} onClick={handleDonutClick} />
+              <Doughnut data={donutData} options={{ responsive: true }} onElementsClick={handleDonutClick} />
             </Paper>
           </Grid>
 
-          {/* Second Chart: Bar Chart */}
+          {/* Second Chart: Bar Chart (Monthly and Ongoing) */}
           <Grid item xs={12} sm={6}>
             <Paper elevation={3} sx={{ borderRadius: 2, padding: 2, backgroundColor: 'white' }}>
               <Typography variant="h6" gutterBottom>
-                Monthly Document Activity
+                Monthly and Ongoing Documents
               </Typography>
-              <Bar data={barData} onClick={handleBarClick} />
+              <Bar data={barData} options={{ responsive: true }} onElementsClick={handleBarClick} />
             </Paper>
           </Grid>
 
-          {/* Third Chart: Department Chart */}
+          {/* Third Chart: Department-wise Bar Chart */}
           <Grid item xs={12}>
             <Paper elevation={3} sx={{ borderRadius: 2, padding: 2, backgroundColor: 'white' }}>
               <Typography variant="h6" gutterBottom>
-                Documents Submitted by Department
+                Documents by Department
               </Typography>
-              <Bar data={departmentData} />
+              <Bar data={departmentData} options={{ responsive: true }} />
             </Paper>
           </Grid>
         </Grid>

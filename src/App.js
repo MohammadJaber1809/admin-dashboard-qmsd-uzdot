@@ -12,6 +12,7 @@ import DocumentRCL from './pages/AdminDocumentRCL';
 import AddAccount from './pages/AddAccount';
 import ViewAccount from './pages/ViewAccount';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false); // Track authentication state
@@ -39,6 +40,7 @@ const App = () => {
         {/* Public routes */}
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Protected routes: Accessible only if authenticated */}
         {isAuthenticated ? (
